@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: swagger-mcp-server
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/swagger_mcp?createDatabaseIfNotExist=true
+    username: root
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  ai:
+    mcp:
+      server:
+        protocol: STREAMABLE
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.ndgl: DEBUG
+    org.springframework.ai: DEBUG
