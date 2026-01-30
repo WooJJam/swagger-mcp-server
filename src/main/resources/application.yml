@@ -3,9 +3,9 @@ spring:
     name: swagger-mcp-server
 
   datasource:
-    url: jdbc:mysql://localhost:3306/swagger_mcp?createDatabaseIfNotExist=true
-    username: root
-    password:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -20,7 +20,7 @@ spring:
   ai:
     mcp:
       server:
-        protocol: STREAMABLE
+        protocol: STATELESS
 
 server:
   port: 8080
