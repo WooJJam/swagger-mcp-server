@@ -42,8 +42,13 @@ out/
 ### Project Specific ###
 PRD.md
 IMPLEMENTATION_PLAN.md
+TROUBLESHOOTING.md
 
 ### Secret Key ###
 **/application-*.yml
 sample-swagger.json
 src/main/java/com/ndgl/swaggermcp/controller/TestController.java
+
+### AI ###
+.claude
+CLAUDE.md
