@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Iterator;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -36,36 +37,78 @@ public class JsonSchemaParsingSupport {
         return content.path(firstContentType);
     }
 
-    public ExampleData extractExample(final JsonNode jsonContent) {
+    public ExampleData extractExample(final JsonNode jsonContent, final JsonNode resolvedSchema) {
         if (jsonContent == null || jsonContent.isMissingNode()) {
             return ExampleData.empty();
         }
 
+        // 1. content level의 example 먼저 확인
         final JsonNode example = jsonContent.path("example");
         if (!example.isMissingNode()) {
             return new ExampleData(example, null, null);
         }
 
+        // 2. content level의 examples 확인
         final JsonNode examples = jsonContent.path("examples");
-        if (!examples.isObject()) {
-            return ExampleData.empty();
+        if (examples.isObject()) {
+            final Iterator<String> exampleNames = examples.fieldNames();
+            if (exampleNames.hasNext()) {
+                final String firstName = exampleNames.next();
+                final JsonNode exampleEntry = examples.path(firstName);
+                final JsonNode value = exampleEntry.path("value");
+                final JsonNode valueNode = value.isMissingNode() ? exampleEntry : value;
+
+                return new ExampleData(
+                        valueNode,
+                        firstName,
+                        exampleEntry.path("description").asText("")
+                );
+            }
         }
 
-        final Iterator<String> exampleNames = examples.fieldNames();
-        if (!exampleNames.hasNext()) {
-            return ExampleData.empty();
+        // 3. schema 내부의 properties에서 example 추출 (resolvedSchema 사용)
+        if (resolvedSchema != null && !resolvedSchema.isMissingNode()) {
+            final JsonNode exampleFromSchema = extractExamplesFromSchema(resolvedSchema);
+            if (exampleFromSchema != null && !exampleFromSchema.isNull()) {
+                return new ExampleData(exampleFromSchema, null, null);
+            }
         }
 
-        final String firstName = exampleNames.next();
-        final JsonNode exampleEntry = examples.path(firstName);
-        final JsonNode value = exampleEntry.path("value");
-        final JsonNode valueNode = value.isMissingNode() ? exampleEntry : value;
+        return ExampleData.empty();
+    }
 
-        return new ExampleData(
-                valueNode,
-                firstName,
-                exampleEntry.path("description").asText("")
-        );
+    /**
+     * Schema의 properties에서 example들을 추출하여 하나의 객체로 조립
+     *
+     * @param schema OpenAPI schema 객체
+     * @return example 객체 (JsonNode) 또는 null
+     */
+    public JsonNode extractExamplesFromSchema(final JsonNode schema) {
+        if (schema == null || schema.isMissingNode()) {
+            return null;
+        }
+
+        final JsonNode properties = schema.path("properties");
+        if (properties.isMissingNode() || !properties.isObject()) {
+            return null;
+        }
+
+        final var exampleObject = objectMapper.createObjectNode();
+        boolean hasAnyExample = false;
+
+        for (final Iterator<Map.Entry<String, JsonNode>> it = properties.fields(); it.hasNext(); ) {
+            final Map.Entry<String, JsonNode> entry = it.next();
+            final String fieldName = entry.getKey();
+            final JsonNode fieldSchema = entry.getValue();
+
+            final JsonNode fieldExample = fieldSchema.path("example");
+            if (!fieldExample.isMissingNode()) {
+                exampleObject.set(fieldName, fieldExample);
+                hasAnyExample = true;
+            }
+        }
+
+        return hasAnyExample ? exampleObject : null;
     }
 
     public String convertToJsonString(final JsonNode node) {
@@ -125,6 +168,45 @@ public class JsonSchemaParsingSupport {
         }
 
         return current;
+    }
+
+    /**
+     * Schema의 required 배열 정보를 각 property에 포함시켜 enriched schema 생성
+     *
+     * @param schema 원본 OpenAPI schema
+     * @return required 정보가 각 필드에 포함된 schema
+     */
+    public JsonNode enrichSchemaWithRequired(final JsonNode schema) {
+        if (schema == null || schema.isMissingNode()) {
+            return schema;
+        }
+
+        // schema를 복사하여 수정 (원본 보존)
+        final var enrichedSchema = schema.deepCopy();
+
+        final JsonNode properties = enrichedSchema.path("properties");
+        if (properties.isMissingNode() || !properties.isObject()) {
+            return enrichedSchema;
+        }
+
+        // required 배열 추출
+        final JsonNode requiredArray = enrichedSchema.path("required");
+        final var requiredFields = new java.util.HashSet<String>();
+        if (requiredArray.isArray()) {
+            requiredArray.forEach(field -> requiredFields.add(field.asText()));
+        }
+
+        // properties의 각 필드에 required 정보 추가
+        final var propertiesObject = (com.fasterxml.jackson.databind.node.ObjectNode) properties;
+        propertiesObject.fields().forEachRemaining(entry -> {
+            final String fieldName = entry.getKey();
+            final var fieldSchema = (com.fasterxml.jackson.databind.node.ObjectNode) entry.getValue();
+
+            // required 필드 추가
+            fieldSchema.put("required", requiredFields.contains(fieldName));
+        });
+
+        return enrichedSchema;
     }
 
     public record ExampleData(JsonNode value, String name, String description) {

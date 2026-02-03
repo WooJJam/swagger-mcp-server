@@ -80,7 +80,20 @@ public class ErrorResponseParser {
             );
         }
 
-        final JsonSchemaParsingSupport.ExampleData exampleData = parsingSupport.extractExample(jsonContent);
+        final JsonNode schema = jsonContent.path("schema");
+        final String schemaRef = schema.path("$ref").asText("");
+
+        // $ref를 resolve하여 실제 schema 가져오기
+        final JsonNode resolvedSchema = schemaRef.isEmpty()
+                ? schema
+                : parsingSupport.resolveSchemaRef(swaggerJson, schemaRef);
+
+        // required 정보를 각 필드에 포함시킨 enriched schema 생성
+        final JsonNode enrichedSchema = parsingSupport.enrichSchemaWithRequired(
+                resolvedSchema != null ? resolvedSchema : schema
+        );
+
+        final JsonSchemaParsingSupport.ExampleData exampleData = parsingSupport.extractExample(jsonContent, resolvedSchema);
         final JsonNode example = exampleData.value() == null ? MissingNode.getInstance() : exampleData.value();
         final String errorCode = firstNonEmpty(
                 example.path("errorCode").asText(""),
@@ -96,15 +109,7 @@ public class ErrorResponseParser {
 
         final String[] errorCodeParts = parseErrorCode(errorCode);
 
-        final JsonNode schema = jsonContent.path("schema");
-        final String schemaRef = schema.path("$ref").asText("");
-
-        // $ref를 resolve하여 실제 schema 가져오기
-        final JsonNode resolvedSchema = schemaRef.isEmpty()
-                ? schema
-                : parsingSupport.resolveSchemaRef(swaggerJson, schemaRef);
-
-        final String schemaJson = parsingSupport.convertToJsonString(resolvedSchema != null ? resolvedSchema : schema);
+        final String schemaJson = parsingSupport.convertToJsonString(enrichedSchema);
 
         return new ParsedErrorResponse(
                 statusCode,

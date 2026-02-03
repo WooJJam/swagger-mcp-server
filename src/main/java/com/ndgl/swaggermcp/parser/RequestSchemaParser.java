@@ -42,9 +42,14 @@ public class RequestSchemaParser {
                 ? schema
                 : parsingSupport.resolveSchemaRef(swaggerJson, schemaRef);
 
-        final JsonSchemaParsingSupport.ExampleData exampleData = parsingSupport.extractExample(jsonContent);
+        // required 정보를 각 필드에 포함시킨 enriched schema 생성
+        final JsonNode enrichedSchema = parsingSupport.enrichSchemaWithRequired(
+                resolvedSchema != null ? resolvedSchema : schema
+        );
+
+        final JsonSchemaParsingSupport.ExampleData exampleData = parsingSupport.extractExample(jsonContent, resolvedSchema);
         final String exampleJson = parsingSupport.convertToJsonString(exampleData.value());
-        final String schemaJson = parsingSupport.convertToJsonString(resolvedSchema != null ? resolvedSchema : schema);
+        final String schemaJson = parsingSupport.convertToJsonString(enrichedSchema);
 
         return new ParsedRequestBody(
                 dtoName,
