@@ -45,3 +45,5 @@ IMPLEMENTATION_PLAN.md
 
 ### Secret Key ###
 **/application-*.yml
+sample-swagger.json
+src/main/java/com/ndgl/swaggermcp/controller/TestController.java

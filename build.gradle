@@ -30,6 +30,7 @@ dependencies {
 
     // Database
     runtimeOnly 'com.mysql:mysql-connector-j'
+    runtimeOnly 'com.h2database:h2'
 
     // Spring AI MCP Server
     implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc:1.1.2'
@@ -47,6 +48,7 @@ dependencies {
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'com.h2database:h2'
 }
 
 tasks.named('test') {

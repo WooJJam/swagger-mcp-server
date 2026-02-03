@@ -1,5 +1,7 @@
 package com.ndgl.swaggermcp.service;
 
+import java.util.Iterator;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +24,7 @@ public class SwaggerFetchService {
      * @param swaggerUrl Swagger JSON URL
      * @return Swagger JSON (JsonNode)
      */
-    public JsonNode fetchSwaggerJson(String swaggerUrl) {
+    public JsonNode fetchSwaggerJson(final String swaggerUrl) {
         log.info("Fetching Swagger JSON from: {}", swaggerUrl);
 
         try {
@@ -38,6 +40,12 @@ public class SwaggerFetchService {
             JsonNode jsonNode = objectMapper.readTree(jsonString);
             log.info("Successfully fetched Swagger JSON. Version: {}",
                     jsonNode.path("openapi").asText("unknown"));
+
+            Iterator<String> fieldNames = jsonNode.path("paths").fieldNames();
+            while (fieldNames.hasNext()) {
+                String path = fieldNames.next();
+                log.info("path = {}", path);
+            }
 
             return jsonNode;
 
