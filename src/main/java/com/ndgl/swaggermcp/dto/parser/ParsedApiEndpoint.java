@@ -6,54 +6,16 @@ import java.util.List;
  * 파싱된 API 엔드포인트 정보
  */
 public record ParsedApiEndpoint(
-        /**
-         * API 경로 (예: /api/v1/travels/{id})
-         */
         String path,
-
-        /**
-         * HTTP 메서드 (예: GET, POST, PUT, DELETE)
-         */
         String method,
-
-        /**
-         * Operation ID (예: getTravelById)
-         */
         String operationId,
-
-        /**
-         * API 요약 설명 (예: 여행 조회)
-         */
         String summary,
-
-        /**
-         * API 상세 설명
-         */
         String description,
-
-        /**
-         * Tags (JSON 문자열)
-         */
         String tagsJson,
-
-        /**
-         * Tags 리스트
-         */
         List<String> tags,
-
-        /**
-         * Request Schema
-         */
-        ParsedRequestSchema requestSchema,
-
-        /**
-         * Response Schemas (2xx 응답)
-         */
+        ParsedRequestBody requestBody,
+        List<ParsedParameter> parameters,
         List<ParsedResponseSchema> responseSchemas,
-
-        /**
-         * Error Responses (4xx, 5xx 응답)
-         */
         List<ParsedErrorResponse> errorResponses
 ) {
 }
