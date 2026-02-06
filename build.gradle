@@ -34,6 +34,7 @@ dependencies {
 
     // Spring AI MCP Server
     implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc:1.1.2'
+    implementation 'org.springframework.ai:spring-ai-mcp-annotations:1.1.2'
 
     // OpenAPI / Swagger Parser
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.15'

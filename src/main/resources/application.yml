@@ -20,10 +20,17 @@ spring:
   ai:
     mcp:
       server:
-        protocol: STATELESS
+        name: swagger-mcp-server
+        version: 0.0.1
+        type: SYNC
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
 
 server:
-  port: 8080
+  port: 8000
 
 logging:
   level:
