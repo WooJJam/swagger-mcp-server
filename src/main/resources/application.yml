@@ -23,11 +23,16 @@ spring:
         name: swagger-mcp-server
         version: 0.0.1
         type: SYNC
+        protocol: STREAMABLE
         capabilities:
           tool: true
           resource: false
           prompt: false
           completion: false
+
+mcp:
+  auth:
+    token: ${MCP_ACCESS_TOKEN}
 
 server:
   port: 8000
