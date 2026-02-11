@@ -64,11 +64,11 @@ public class SwaggerSyncService {
      */
     private void deleteAll() {
         log.info("기존 데이터 삭제 중...");
-        errorResponseRepository.deleteAll();
-        responseSchemaRepository.deleteAll();
-        parameterRepository.deleteAll();
-        requestSchemaRepository.deleteAll();
-        apiEndpointRepository.deleteAll();
+        errorResponseRepository.deleteAllInBatch();
+        responseSchemaRepository.deleteAllInBatch();
+        parameterRepository.deleteAllInBatch();
+        requestSchemaRepository.deleteAllInBatch();
+        apiEndpointRepository.deleteAllInBatch();
         log.info("기존 데이터 삭제 완료");
     }
 

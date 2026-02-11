@@ -37,11 +37,9 @@ public class ApiSearchService {
     public List<ApiSummary> searchApiByKeyword(final String keyword) {
         log.info("API 검색 시작: {}", keyword);
 
-        final List<ApiEndpoint> endpoints = apiEndpointRepository.findAll();
+        final List<ApiEndpoint> endpoints = apiEndpointRepository.searchByKeyword(keyword);
 
-        // 키워드가 path, summary, description, tags 중 하나라도 포함되면 매칭
         final List<ApiSummary> results = endpoints.stream()
-            .filter(endpoint -> matchesKeyword(endpoint, keyword))
             .map(endpoint -> new ApiSummary(
                 endpoint.getId(),
                 endpoint.getPath(),
@@ -98,20 +96,16 @@ public class ApiSearchService {
      */
     public RequestForAI getRequestFormat(final Long apiId) {
         // 1. Request Body 조회
-        final List<RequestSchema> requestSchemas = requestSchemaRepository.findAll().stream()
-            .filter(rs -> rs.getApiEndpointId().equals(apiId))
-            .toList();
+        final Optional<RequestSchema> requestSchemaOpt = requestSchemaRepository.findByApiEndpointId(apiId);
 
         Map<String, FieldInfo> body = Collections.emptyMap();
-        if (!requestSchemas.isEmpty()) {
-            final RequestSchema requestSchema = requestSchemas.get(0);
+        if (requestSchemaOpt.isPresent()) {
+            final RequestSchema requestSchema = requestSchemaOpt.get();
             body = schemaFormatter.formatSchema(requestSchema.getSchemaJson(), requestSchema.getExampleJson());
         }
 
         // 2. Parameters 조회
-        final List<Parameter> parameters = parameterRepository.findAll().stream()
-            .filter(p -> p.getApiEndpointId().equals(apiId))
-            .toList();
+        final List<Parameter> parameters = parameterRepository.findByApiEndpointId(apiId);
 
         final List<ParameterInfo> parameterInfos = schemaFormatter.formatParameters(parameters);
 
@@ -125,9 +119,7 @@ public class ApiSearchService {
      * @return 상태 코드별 Response 포맷
      */
     public Map<Integer, ResponseForAI> getResponseFormat(final Long apiId) {
-        final List<ResponseSchema> responseSchemas = responseSchemaRepository.findAll().stream()
-            .filter(rs -> rs.getApiEndpointId().equals(apiId))
-            .toList();
+        final List<ResponseSchema> responseSchemas = responseSchemaRepository.findByApiEndpointId(apiId);
 
         return responseSchemas.stream()
             .collect(Collectors.toMap(
@@ -147,9 +139,7 @@ public class ApiSearchService {
      * @return 상태 코드별 Error 포맷
      */
     public Map<Integer, ErrorForAI> getErrorFormats(final Long apiId) {
-        final List<ErrorResponse> errorResponses = errorResponseRepository.findAll().stream()
-            .filter(er -> er.getApiEndpointId().equals(apiId))
-            .toList();
+        final List<ErrorResponse> errorResponses = errorResponseRepository.findByApiEndpointId(apiId);
 
         return errorResponses.stream()
             .collect(Collectors.toMap(
@@ -166,36 +156,4 @@ public class ApiSearchService {
             ));
     }
 
-    /**
-     * 키워드 매칭 여부 확인
-     */
-    private boolean matchesKeyword(final ApiEndpoint endpoint, final String keyword) {
-        final String lowerKeyword = keyword.toLowerCase();
-
-        // Path 매칭
-        if (endpoint.getPath() != null && endpoint.getPath().toLowerCase().contains(lowerKeyword)) {
-            return true;
-        }
-
-        // Summary 매칭
-        if (endpoint.getSummary() != null && endpoint.getSummary().toLowerCase().contains(lowerKeyword)) {
-            return true;
-        }
-
-        // Description 매칭
-        if (endpoint.getDescription() != null && endpoint.getDescription().toLowerCase().contains(lowerKeyword)) {
-            return true;
-        }
-
-        // Tags 매칭
-        if (endpoint.getTags() != null) {
-            for (final String tag : endpoint.getTags()) {
-                if (tag.toLowerCase().contains(lowerKeyword)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
 }
