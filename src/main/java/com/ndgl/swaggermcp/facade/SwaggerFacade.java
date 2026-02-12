@@ -1,10 +1,9 @@
 package com.ndgl.swaggermcp.facade;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.ndgl.swaggermcp.dto.facade.SwaggerParseResult;
 import com.ndgl.swaggermcp.dto.facade.SwaggerSyncResult;
 import com.ndgl.swaggermcp.dto.parser.ParsedApiEndpoint;
-import com.ndgl.swaggermcp.dto.parser.ParsedTag;
+import com.ndgl.swaggermcp.service.SwaggerExtractorService;
 import com.ndgl.swaggermcp.service.SwaggerFetchService;
 import com.ndgl.swaggermcp.service.SwaggerParserService;
 import com.ndgl.swaggermcp.service.SwaggerSyncService;
@@ -25,6 +24,7 @@ public class SwaggerFacade {
 
     private final SwaggerFetchService swaggerFetchService;
     private final SwaggerParserService swaggerParserService;
+    private final SwaggerExtractorService swaggerExtractorService;
     private final SwaggerSyncService swaggerSyncService;
 
     /**
@@ -41,7 +41,7 @@ public class SwaggerFacade {
             final JsonNode swaggerJson = swaggerFetchService.fetchSwaggerJson(swaggerUrl);
 
             // 2. 버전 추출
-            final String swaggerVersion = swaggerParserService.extractVersion(swaggerJson);
+            final String swaggerVersion = swaggerExtractorService.extractVersion(swaggerJson);
 
             // 3. 파싱
             final List<ParsedApiEndpoint> endpoints = swaggerParserService.parseApiEndpoints(swaggerJson);

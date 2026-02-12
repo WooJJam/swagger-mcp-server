@@ -69,26 +69,6 @@ public class SwaggerParserService {
         return tagParser.parseTags(swaggerJson);
     }
 
-    /**
-     * Swagger 버전 추출
-     * @param swaggerJson Swagger JSON
-     * @return OpenAPI 버전 (예: "3.0.1")
-     */
-    public String extractVersion(final JsonNode swaggerJson) {
-        final JsonNode openapi = swaggerJson.path("openapi");
-        if (!openapi.isMissingNode()) {
-            return openapi.asText();
-        }
-
-        final JsonNode swagger = swaggerJson.path("swagger");
-        if (!swagger.isMissingNode()) {
-            return swagger.asText();
-        }
-
-        log.warn("Swagger 버전 정보를 찾을 수 없습니다");
-        return "unknown";
-    }
-
     private ParsedApiEndpoint parseOperation(final JsonNode swaggerJson, final String path, final String method, final JsonNode operation) {
         // 1. 기본 정보 파싱
         final ParsedEndpointBasicInfo basicInfo = basicInfoParser.parseBasicInfo(path, method, operation);
