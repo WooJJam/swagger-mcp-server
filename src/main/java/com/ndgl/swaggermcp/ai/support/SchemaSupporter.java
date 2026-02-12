@@ -1,4 +1,4 @@
-package com.ndgl.swaggermcp.common.formatter;
+package com.ndgl.swaggermcp.ai.support;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,7 +18,7 @@ import java.util.*;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class SchemaFormatter {
+public class SchemaSupporter {
 
     private final ObjectMapper objectMapper;
 
