@@ -203,20 +203,20 @@ public class SwaggerSyncService {
                 final ErrorResponse errorResponse = ErrorResponse.builder()
                         .apiEndpointId(apiEndpointId)
                         .statusCode(error.statusCode())
-                        .errorCode(error.errorCode())
-                        .errorName(error.errorName())
-                        .errorMessage(error.message())
+                        .code(error.code())
+                        .message(error.message())
                         .domainCode(error.domainCode())
                         .categoryCode(error.categoryCode())
                         .detailCode(error.detailCode())
                         .description(error.description())
                         .schemaJson(schemaMap)
+                        .errors(error.errors())
                         .build();
 
                 errorResponseRepository.save(errorResponse);
-                log.debug("Error Response 저장: {} ({})", error.errorCode(), error.statusCode());
+                log.debug("Error Response 저장: {} ({})", error.code(), error.statusCode());
             } catch (Exception e) {
-                log.error("Error Response 저장 실패: {} ({})", error.errorCode(), error.statusCode(), e);
+                log.error("Error Response 저장 실패: {} ({})", error.code(), error.statusCode(), e);
             }
         }
     }

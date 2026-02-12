@@ -23,14 +23,14 @@ public interface ErrorResponseRepository extends JpaRepository<ErrorResponse, Lo
     List<ErrorResponse> findByApiEndpointIdAndStatusCode(Long apiEndpointId, Integer statusCode);
 
     /**
-     * Error Code로 Error Response 조회
+     * code로 Error Response 조회
      */
-    Optional<ErrorResponse> findByErrorCode(String errorCode);
+    Optional<ErrorResponse> findByCode(String code);
 
     /**
-     * Error Code로 Error Response 목록 조회
+     * code 목록으로 Error Response 목록 조회
      */
-    List<ErrorResponse> findByErrorCodeIn(List<String> errorCodes);
+    List<ErrorResponse> findByCodeIn(List<String> codes);
 
     /**
      * Domain Code로 Error Response 목록 조회
@@ -48,14 +48,14 @@ public interface ErrorResponseRepository extends JpaRepository<ErrorResponse, Lo
     List<ErrorResponse> findByApiEndpointIdIn(List<Long> apiEndpointIds);
 
     /**
-     * Error Code로 검색 (부분 일치)
+     * code로 검색 (부분 일치)
      */
-    List<ErrorResponse> findByErrorCodeContainingIgnoreCase(String errorCode);
+    List<ErrorResponse> findByCodeContainingIgnoreCase(String code);
 
     /**
-     * Error Message로 검색 (부분 일치)
+     * message로 검색 (부분 일치)
      */
-    List<ErrorResponse> findByErrorMessageContainingIgnoreCase(String errorMessage);
+    List<ErrorResponse> findByMessageContainingIgnoreCase(String message);
 
     /**
      * 특정 Status Code 범위의 Error Response 조회 (4xx, 5xx 등)

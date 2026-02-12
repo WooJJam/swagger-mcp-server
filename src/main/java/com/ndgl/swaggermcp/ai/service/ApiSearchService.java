@@ -1,6 +1,6 @@
 package com.ndgl.swaggermcp.ai.service;
 
-import com.ndgl.swaggermcp.common.formatter.SchemaFormatter;
+import com.ndgl.swaggermcp.ai.support.SchemaSupporter;
 import com.ndgl.swaggermcp.persistence.entity.ApiEndpoint;
 import com.ndgl.swaggermcp.persistence.entity.ErrorResponse;
 import com.ndgl.swaggermcp.persistence.entity.Parameter;
@@ -41,7 +41,7 @@ public class ApiSearchService {
     private final ParameterRepository parameterRepository;
     private final ResponseSchemaRepository responseSchemaRepository;
     private final ErrorResponseRepository errorResponseRepository;
-    private final SchemaFormatter schemaFormatter;
+    private final SchemaSupporter schemaSupporter;
 
     /**
      * 키워드로 API 검색
@@ -116,13 +116,13 @@ public class ApiSearchService {
         Map<String, FieldInfo> body = Collections.emptyMap();
         if (requestSchemaOpt.isPresent()) {
             final RequestSchema requestSchema = requestSchemaOpt.get();
-            body = schemaFormatter.formatSchema(requestSchema.getSchemaJson(), requestSchema.getExampleJson());
+            body = schemaSupporter.formatSchema(requestSchema.getSchemaJson(), requestSchema.getExampleJson());
         }
 
         // 2. Parameters 조회
         final List<Parameter> parameters = parameterRepository.findByApiEndpointId(apiId);
 
-        final List<ParameterInfo> parameterInfos = schemaFormatter.formatParameters(parameters);
+        final List<ParameterInfo> parameterInfos = schemaSupporter.formatParameters(parameters);
 
         return new RequestForAI(body, parameterInfos);
     }
@@ -142,7 +142,7 @@ public class ApiSearchService {
                 rs -> new ResponseForAI(
                     rs.getStatusCode(),
                     "Success",
-                    schemaFormatter.formatSchema(rs.getSchemaJson(), rs.getExampleJson())
+                    schemaSupporter.formatSchema(rs.getSchemaJson(), rs.getExampleJson())
                 )
             ));
     }
@@ -161,11 +161,11 @@ public class ApiSearchService {
                 ErrorResponse::getStatusCode,
                 er -> new ErrorForAI(
                     er.getStatusCode(),
-                    er.getErrorCode(),
-                    er.getErrorName(),
-                    er.getErrorMessage(),
+                    er.getCode(),
+                    er.getMessage(),
                     er.getDescription(),
-                    schemaFormatter.formatSchema(er.getSchemaJson(), null)
+                    schemaSupporter.formatSchema(er.getSchemaJson(), null),
+                    er.getErrors()
                 ),
                 (existing, replacement) -> existing // 중복 키 처리
             ));

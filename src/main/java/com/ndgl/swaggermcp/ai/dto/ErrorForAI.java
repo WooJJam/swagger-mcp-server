@@ -1,5 +1,6 @@
 package com.ndgl.swaggermcp.ai.dto;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -7,10 +8,10 @@ import java.util.Map;
  */
 public record ErrorForAI(
         Integer statusCode,
-        String errorCode,
-        String errorName,
+        String code,
         String message,
         String description,
-        Map<String, FieldInfo> schema
+        Map<String, FieldInfo> schema,
+        List<Map<String, Object>> errors
 ) {
 }

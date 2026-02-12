@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,32 +55,12 @@ public class ErrorResponseParser {
         final JsonNode content = response.path("content");
 
         if (content.isMissingNode()) {
-            return new ParsedErrorResponse(
-                    statusCode,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    description,
-                    null
-            );
+            return new ParsedErrorResponse(statusCode, null, null, null, null, null, description, null, null);
         }
 
         final JsonNode jsonContent = parsingSupport.selectContentNode(content);
         if (jsonContent.isMissingNode()) {
-            return new ParsedErrorResponse(
-                    statusCode,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    description,
-                    null
-            );
+            return new ParsedErrorResponse(statusCode, null, null, null, null, null, description, null, null);
         }
 
         final JsonNode schema = jsonContent.path("schema");
@@ -97,33 +78,43 @@ public class ErrorResponseParser {
 
         final JsonSchemaParsingSupport.ExampleData exampleData = parsingSupport.extractExample(jsonContent, resolvedSchema);
         final JsonNode example = exampleData.value() == null ? MissingNode.getInstance() : exampleData.value();
-        final String errorCode = firstNonEmpty(
-                example.path("errorCode").asText(""),
-                example.path("code").asText("")
-        );
-        final String errorName = firstNonEmpty(
-                example.path("errorName").asText(""),
-                example.path("name").asText(""),
-                exampleData.description(),
-                exampleData.name()
-        );
+
+        final String code = example.path("code").asText("");
         final String message = example.path("message").asText("");
+        final List<Map<String, Object>> errors = parseValidationErrors(example);
 
-        final String[] errorCodeParts = parseErrorCode(errorCode);
-
+        final String[] codeParts = parseErrorCode(code);
         final String schemaJson = parsingSupport.convertToJsonString(enrichedSchema);
 
         return new ParsedErrorResponse(
                 statusCode,
-                errorCode,
-                errorCodeParts[0],
-                errorCodeParts[1],
-                errorCodeParts[2],
-                errorName,
+                code,
+                codeParts[0],
+                codeParts[1],
+                codeParts[2],
                 message,
                 description,
-                schemaJson
+                schemaJson,
+                errors
         );
+    }
+
+    private List<Map<String, Object>> parseValidationErrors(final JsonNode example) {
+        final List<Map<String, Object>> validationErrors = new ArrayList<>();
+        final JsonNode errorsNode = example.path("errors");
+
+        if (errorsNode.isMissingNode() || !errorsNode.isArray()) {
+            return validationErrors;
+        }
+
+        errorsNode.forEach(errorNode -> {
+            final Map<String, Object> errorMap = new HashMap<>();
+            errorMap.put("field", errorNode.path("field").asText(""));
+            errorMap.put("message", errorNode.path("message").asText(""));
+            validationErrors.add(errorMap);
+        });
+
+        return validationErrors;
     }
 
     private String[] parseErrorCode(final String errorCode) {
@@ -139,17 +130,5 @@ public class ErrorResponseParser {
         if (split.length >= 3) parts[2] = split[2];
 
         return parts;
-    }
-
-    private String firstNonEmpty(final String... candidates) {
-        if (candidates == null) {
-            return "";
-        }
-        for (final String candidate : candidates) {
-            if (candidate != null && !candidate.isBlank()) {
-                return candidate;
-            }
-        }
-        return "";
     }
 }

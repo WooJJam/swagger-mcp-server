@@ -5,11 +5,12 @@ import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.util.List;
 import java.util.Map;
 
 @Entity
 @Table(name = "error_responses", indexes = {
-    @Index(name = "idx_error_code", columnList = "error_code")
+    @Index(name = "idx_code", columnList = "code")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -25,14 +26,11 @@ public class ErrorResponse {
     @Column(name = "status_code", nullable = false)
     private Integer statusCode;
 
-    @Column(name = "error_code", nullable = false, length = 50)
-    private String errorCode;
+    @Column(name = "code", nullable = false, length = 50)
+    private String code;
 
-    @Column(name = "error_name", length = 100)
-    private String errorName;
-
-    @Column(name = "error_message", nullable = false, columnDefinition = "TEXT")
-    private String errorMessage;
+    @Column(name = "message", nullable = false, columnDefinition = "TEXT")
+    private String message;
 
     @Column(name = "domain_code", length = 20)
     private String domainCode;
@@ -50,25 +48,30 @@ public class ErrorResponse {
     @Column(name = "schema_json", columnDefinition = "JSON")
     private Map<String, Object> schemaJson;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "errors", columnDefinition = "JSON")
+    private List<Map<String, Object>> errors;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "api_endpoint_id", insertable = false, updatable = false)
     private ApiEndpoint apiEndpoint;
 
     @Builder
     public ErrorResponse(final Long id, final Long apiEndpointId, final Integer statusCode,
-                         final String errorCode, final String errorName, final String errorMessage,
+                         final String code, final String message,
                          final String domainCode, final String categoryCode, final String detailCode,
-                         final String description, final Map<String, Object> schemaJson) {
+                         final String description, final Map<String, Object> schemaJson,
+                         final List<Map<String, Object>> errors) {
         this.id = id;
         this.apiEndpointId = apiEndpointId;
         this.statusCode = statusCode;
-        this.errorCode = errorCode;
-        this.errorName = errorName;
-        this.errorMessage = errorMessage;
+        this.code = code;
+        this.message = message;
         this.domainCode = domainCode;
         this.categoryCode = categoryCode;
         this.detailCode = detailCode;
         this.description = description;
         this.schemaJson = schemaJson;
+        this.errors = errors;
     }
 }
