@@ -4,12 +4,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.MissingNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Component
@@ -191,20 +195,21 @@ public class JsonSchemaParsingSupport {
 
         // required 배열 추출
         final JsonNode requiredArray = enrichedSchema.path("required");
-        final var requiredFields = new java.util.HashSet<String>();
+        final var requiredFields = new HashSet<String>();
         if (requiredArray.isArray()) {
             requiredArray.forEach(field -> requiredFields.add(field.asText()));
         }
 
         // properties의 각 필드에 required 정보 추가
-        final var propertiesObject = (com.fasterxml.jackson.databind.node.ObjectNode) properties;
-        propertiesObject.fields().forEachRemaining(entry -> {
-            final String fieldName = entry.getKey();
-            final var fieldSchema = (com.fasterxml.jackson.databind.node.ObjectNode) entry.getValue();
+        final ObjectNode propertiesObject = (ObjectNode) properties;
+        for (final var entry : propertiesObject.properties()) {
+            String fieldName = entry.getKey();
+            final JsonNode fieldSchema = entry.getValue();
 
-            // required 필드 추가
-            fieldSchema.put("required", requiredFields.contains(fieldName));
-        });
+            if (fieldSchema instanceof ObjectNode objectNode) {
+                objectNode.put("required", requiredFields.contains(fieldName));
+            }
+        }
 
         return enrichedSchema;
     }

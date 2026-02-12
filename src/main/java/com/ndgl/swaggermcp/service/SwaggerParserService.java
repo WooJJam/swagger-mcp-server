@@ -47,7 +47,7 @@ public class SwaggerParserService {
         }
 
         for (final Map.Entry<String, JsonNode> pathEntry : paths.properties()) {
-            final String path = pathEntry.getKey();
+            final String path = pathEntry.getKey(); // api endpoint
             final JsonNode methods = pathEntry.getValue();
 
             for (final Map.Entry<String, JsonNode> methodEntry : methods.properties()) {
