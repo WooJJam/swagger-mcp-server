@@ -72,7 +72,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /app
+            cd app
 
             # 환경 변수 파일 생성
             echo "${{ secrets.ENV_FILE }}" > .env
@@ -83,8 +83,8 @@ jobs:
             # 최신 이미지 pull
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/swagger-mcp-server:latest
 
-            # MySQL은 유지, 앱만 재시작
-            docker compose up -d --no-deps app
+            # 컨테이너 실행 (이미 실행 중인 컨테이너는 유지)
+            docker compose up -d
 
             # 오래된 이미지 정리
             docker image prune -f
