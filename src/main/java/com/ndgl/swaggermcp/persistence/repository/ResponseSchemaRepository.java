@@ -31,11 +31,6 @@ public interface ResponseSchemaRepository extends JpaRepository<ResponseSchema, 
     List<ResponseSchema> findByApiEndpointIdAndStatusCodeIn(Long apiEndpointId, List<Integer> statusCodes);
 
     /**
-     * DTO 이름으로 Response Schema 검색
-     */
-    List<ResponseSchema> findByDtoNameContainingIgnoreCase(String dtoName);
-
-    /**
      * API Endpoint ID로 존재 여부 확인
      */
     boolean existsByApiEndpointId(Long apiEndpointId);

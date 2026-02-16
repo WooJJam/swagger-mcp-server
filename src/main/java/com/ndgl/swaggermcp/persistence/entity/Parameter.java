@@ -34,10 +34,6 @@ public class Parameter {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "api_endpoint_id", insertable = false, updatable = false)
-    private ApiEndpoint apiEndpoint;
-
     @Builder
     public Parameter(final Long id, final Long apiEndpointId, final String name,
                      final String in, final Boolean required, final String type,

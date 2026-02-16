@@ -52,10 +52,6 @@ public class ErrorResponse {
     @Column(name = "errors", columnDefinition = "JSON")
     private List<Map<String, Object>> errors;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "api_endpoint_id", insertable = false, updatable = false)
-    private ApiEndpoint apiEndpoint;
-
     @Builder
     public ErrorResponse(final Long id, final Long apiEndpointId, final Integer statusCode,
                          final String code, final String message,

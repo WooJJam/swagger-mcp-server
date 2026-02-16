@@ -34,10 +34,6 @@ public class ResponseSchema {
     @Column(name = "example_json", columnDefinition = "JSON")
     private Map<String, Object> exampleJson;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "api_endpoint_id", insertable = false, updatable = false)
-    private ApiEndpoint apiEndpoint;
-
     @Builder
     public ResponseSchema(final Long id, final Long apiEndpointId, final Integer statusCode,
                           final String dtoName, final Map<String, Object> schemaJson,

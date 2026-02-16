@@ -71,10 +71,14 @@ public class ErrorResponseParser {
                 ? schema
                 : parsingSupport.resolveSchemaRef(swaggerJson, schemaRef);
 
-        // required 정보를 각 필드에 포함시킨 enriched schema 생성
-        final JsonNode enrichedSchema = parsingSupport.enrichSchemaWithRequired(
+        // 중첩 $ref를 재귀적으로 resolve
+        final JsonNode fullyResolvedSchema = parsingSupport.resolveAllRefs(
+                swaggerJson,
                 resolvedSchema != null ? resolvedSchema : schema
         );
+
+        // required 정보를 각 필드에 포함시킨 enriched schema 생성
+        final JsonNode enrichedSchema = parsingSupport.enrichSchemaWithRequired(fullyResolvedSchema);
 
         final JsonSchemaParsingSupport.ExampleData exampleData = parsingSupport.extractExample(jsonContent, resolvedSchema);
         final JsonNode example = exampleData.value() == null ? MissingNode.getInstance() : exampleData.value();

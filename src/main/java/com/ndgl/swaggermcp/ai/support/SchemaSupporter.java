@@ -145,7 +145,7 @@ public class SchemaSupporter {
     }
 
     /**
-     * FieldInfo 생성
+     * FieldInfo 생성 (중첩 object/array 재귀 처리)
      */
     private FieldInfo createFieldInfo(
         final Map<String, Object> fieldSchema,
@@ -159,7 +159,46 @@ public class SchemaSupporter {
         // example이 fieldSchema 내부에 있을 수도 있음
         final Object finalExample = example != null ? example : fieldSchema.get("example");
 
-        return new FieldInfo(type, format, required, description, finalExample);
+        log.debug("createFieldInfo 호출 - type: {}, keys: {}", type, fieldSchema.keySet());
+
+        // 중첩 object 타입 처리: 내부 properties 재귀 변환
+        Map<String, FieldInfo> nestedProperties = null;
+        if ("object".equals(type) && fieldSchema.containsKey("properties")) {
+            log.debug("중첩 object 처리 시작 - properties keys: {}", ((Map<?, ?>) fieldSchema.get("properties")).keySet());
+            nestedProperties = formatNestedProperties(fieldSchema);
+        }
+
+        // 배열 타입 처리: items 내부 구조 재귀 변환
+        FieldInfo itemsFieldInfo = null;
+        if ("array".equals(type) && fieldSchema.containsKey("items")) {
+            final Map<String, Object> itemsSchema = convertToMap(fieldSchema.get("items"));
+            log.debug("배열 items 처리 시작 - items keys: {}", itemsSchema.keySet());
+            itemsFieldInfo = createFieldInfo(itemsSchema, false, null);
+        }
+
+        return new FieldInfo(type, format, required, description, finalExample, nestedProperties, itemsFieldInfo);
+    }
+
+    /**
+     * 중첩 object의 properties를 재귀적으로 FieldInfo Map으로 변환
+     */
+    private Map<String, FieldInfo> formatNestedProperties(final Map<String, Object> schemaMap) {
+        final Map<String, Object> properties = extractProperties(schemaMap);
+        if (properties.isEmpty()) {
+            return null;
+        }
+
+        final List<String> required = extractRequired(schemaMap);
+        final Map<String, FieldInfo> result = new LinkedHashMap<>();
+
+        for (final Map.Entry<String, Object> entry : properties.entrySet()) {
+            final String fieldName = entry.getKey();
+            final Map<String, Object> fieldSchema = convertToMap(entry.getValue());
+            final FieldInfo fieldInfo = createFieldInfo(fieldSchema, required.contains(fieldName), null);
+            result.put(fieldName, fieldInfo);
+        }
+
+        return result;
     }
 
     /**

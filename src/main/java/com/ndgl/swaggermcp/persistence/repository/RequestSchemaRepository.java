@@ -21,11 +21,6 @@ public interface RequestSchemaRepository extends JpaRepository<RequestSchema, Lo
     List<RequestSchema> findByApiEndpointIdIn(List<Long> apiEndpointIds);
 
     /**
-     * DTO 이름으로 Request Schema 검색
-     */
-    List<RequestSchema> findByDtoNameContainingIgnoreCase(String dtoName);
-
-    /**
      * API Endpoint ID로 존재 여부 확인
      */
     boolean existsByApiEndpointId(Long apiEndpointId);

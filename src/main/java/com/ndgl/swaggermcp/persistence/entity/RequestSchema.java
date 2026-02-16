@@ -31,10 +31,6 @@ public class RequestSchema {
     @Column(name = "example_json", columnDefinition = "JSON")
     private Map<String, Object> exampleJson;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "api_endpoint_id", insertable = false, updatable = false)
-    private ApiEndpoint apiEndpoint;
-
     @Builder
     public RequestSchema(final Long id, final Long apiEndpointId, final String dtoName,
                          final Map<String, Object> schemaJson, final Map<String, Object> exampleJson) {

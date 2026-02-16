@@ -7,13 +7,10 @@ import com.ndgl.swaggermcp.sync.dto.ParsedErrorResponse;
 import com.ndgl.swaggermcp.sync.dto.ParsedParameter;
 import com.ndgl.swaggermcp.sync.dto.ParsedRequestBody;
 import com.ndgl.swaggermcp.sync.dto.ParsedResponseSchema;
-import com.ndgl.swaggermcp.sync.dto.ParsedTag;
 import com.ndgl.swaggermcp.sync.application.parser.EndpointBasicInfoParser;
 import com.ndgl.swaggermcp.sync.application.parser.ErrorResponseParser;
 import com.ndgl.swaggermcp.sync.application.parser.RequestSchemaParser;
 import com.ndgl.swaggermcp.sync.application.parser.ResponseSchemaParser;
-import com.ndgl.swaggermcp.sync.application.parser.TagParser;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,7 +31,6 @@ public class SwaggerParserService {
     private final RequestSchemaParser requestSchemaParser;
     private final ResponseSchemaParser responseSchemaParser;
     private final ErrorResponseParser errorResponseParser;
-    private final TagParser tagParser;
 
     public List<ParsedApiEndpoint> parseApiEndpoints(final JsonNode swaggerJson) {
         log.info("API 엔드포인트 파싱 시작");
@@ -63,10 +59,6 @@ public class SwaggerParserService {
 
         log.info("API 엔드포인트 파싱 완료: {}개", endpoints.size());
         return endpoints;
-    }
-
-    public List<ParsedTag> parseTags(final JsonNode swaggerJson) {
-        return tagParser.parseTags(swaggerJson);
     }
 
     private ParsedApiEndpoint parseOperation(final JsonNode swaggerJson, final String path, final String method, final JsonNode operation) {

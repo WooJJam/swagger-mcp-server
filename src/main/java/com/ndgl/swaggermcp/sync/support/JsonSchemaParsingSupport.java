@@ -3,6 +3,7 @@ package com.ndgl.swaggermcp.sync.support;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Component
@@ -137,6 +140,163 @@ public class JsonSchemaParsingSupport {
         }
 
         return current;
+    }
+
+    /**
+     * Schema 내부의 모든 $ref를 재귀적으로 resolve하여 완전한 schema 반환
+     * 원본 schema는 수정하지 않고 deepCopy한 복사본에서 작업
+     *
+     * @param swaggerJson 전체 Swagger JSON
+     * @param schema resolve 대상 schema
+     * @return 모든 $ref가 resolve된 schema (deepCopy본)
+     */
+    public JsonNode resolveAllRefs(final JsonNode swaggerJson, final JsonNode schema) {
+        if (schema == null || schema.isMissingNode()) {
+            return schema;
+        }
+
+        final Set<String> visited = new LinkedHashSet<>();
+        final JsonNode copied = schema.deepCopy();
+
+        // 최상위 노드 자체가 $ref인 경우 처리
+        final JsonNode resolved = resolveIfRef(swaggerJson, copied, visited);
+        if (resolved != copied) {
+            // 최상위가 $ref였고 resolve된 경우, resolve된 노드 내부도 재귀 처리
+            resolveAllRefsRecursive(swaggerJson, resolved, visited);
+            return resolved;
+        }
+
+        resolveAllRefsRecursive(swaggerJson, copied, visited);
+        return copied;
+    }
+
+    /**
+     * 노드 내부의 모든 $ref를 재귀적으로 탐색하여 resolve
+     *
+     * @param swaggerJson 전체 Swagger JSON
+     * @param node 탐색 대상 노드 (이미 deepCopy된 상태)
+     * @param visited 순환 참조 감지를 위한 DFS 경로 추적 Set
+     */
+    private void resolveAllRefsRecursive(final JsonNode swaggerJson, final JsonNode node, final Set<String> visited) {
+        if (node == null || node.isMissingNode() || !node.isObject()) {
+            return;
+        }
+
+        final ObjectNode objectNode = (ObjectNode) node;
+
+        // 1. properties 내부 각 필드의 $ref 처리
+        final JsonNode properties = objectNode.path("properties");
+        if (properties.isObject()) {
+            final ObjectNode propertiesNode = (ObjectNode) properties;
+            final Iterator<String> fieldNames = propertiesNode.fieldNames();
+            // fieldNames 목록을 먼저 수집 (ConcurrentModificationException 방지)
+            final var fieldNameList = new java.util.ArrayList<String>();
+            while (fieldNames.hasNext()) {
+                fieldNameList.add(fieldNames.next());
+            }
+            for (final String fieldName : fieldNameList) {
+                final JsonNode fieldSchema = propertiesNode.get(fieldName);
+                final JsonNode resolvedField = resolveIfRef(swaggerJson, fieldSchema, visited);
+                if (resolvedField != fieldSchema) {
+                    propertiesNode.set(fieldName, resolvedField);
+                }
+                resolveAllRefsRecursive(swaggerJson, resolvedField, visited);
+            }
+        }
+
+        // 2. items (array 타입) 내부 $ref 처리
+        final JsonNode items = objectNode.path("items");
+        if (items.isObject()) {
+            final JsonNode resolvedItems = resolveIfRef(swaggerJson, items, visited);
+            if (resolvedItems != items) {
+                objectNode.set("items", resolvedItems);
+            }
+            resolveAllRefsRecursive(swaggerJson, resolvedItems, visited);
+        }
+
+        // 3. allOf, oneOf, anyOf 배열 내부 $ref 처리
+        resolveRefsInCompositionArray(swaggerJson, objectNode, "allOf", visited);
+        resolveRefsInCompositionArray(swaggerJson, objectNode, "oneOf", visited);
+        resolveRefsInCompositionArray(swaggerJson, objectNode, "anyOf", visited);
+
+        // 4. additionalProperties 내부 $ref 처리
+        final JsonNode additionalProperties = objectNode.path("additionalProperties");
+        if (additionalProperties.isObject()) {
+            final JsonNode resolvedAdditional = resolveIfRef(swaggerJson, additionalProperties, visited);
+            if (resolvedAdditional != additionalProperties) {
+                objectNode.set("additionalProperties", resolvedAdditional);
+            }
+            resolveAllRefsRecursive(swaggerJson, resolvedAdditional, visited);
+        }
+    }
+
+    /**
+     * allOf/oneOf/anyOf 배열의 각 요소에 대해 $ref resolve 수행
+     *
+     * @param swaggerJson 전체 Swagger JSON
+     * @param parentNode 배열을 포함하는 부모 노드
+     * @param compositionKey 배열 키 (allOf, oneOf, anyOf)
+     * @param visited 순환 참조 감지를 위한 DFS 경로 추적 Set
+     */
+    private void resolveRefsInCompositionArray(final JsonNode swaggerJson, final ObjectNode parentNode,
+                                                final String compositionKey, final Set<String> visited) {
+        final JsonNode compositionArray = parentNode.path(compositionKey);
+        if (!compositionArray.isArray()) {
+            return;
+        }
+
+        final ArrayNode arrayNode = (ArrayNode) compositionArray;
+        for (int i = 0; i < arrayNode.size(); i++) {
+            final JsonNode element = arrayNode.get(i);
+            final JsonNode resolvedElement = resolveIfRef(swaggerJson, element, visited);
+            if (resolvedElement != element) {
+                arrayNode.set(i, resolvedElement);
+            }
+            resolveAllRefsRecursive(swaggerJson, resolvedElement, visited);
+        }
+    }
+
+    /**
+     * 노드가 $ref를 가지고 있으면 resolve하여 실제 schema 반환
+     * 순환 참조 감지: DFS 경로 기반 visited Set 사용 (형제 노드의 같은 $ref는 허용, 조상-자손 순환만 차단)
+     *
+     * @param swaggerJson 전체 Swagger JSON
+     * @param node 검사 대상 노드
+     * @param visited 순환 참조 감지를 위한 DFS 경로 추적 Set
+     * @return resolve된 노드 (deepCopy본) 또는 원본 노드 ($ref가 없는 경우)
+     */
+    private JsonNode resolveIfRef(final JsonNode swaggerJson, final JsonNode node, final Set<String> visited) {
+        if (node == null || !node.isObject() || !node.has("$ref")) {
+            return node;
+        }
+
+        final String ref = node.get("$ref").asText();
+
+        // 순환 참조 감지: 현재 DFS 경로에 이미 존재하면 순환
+        if (visited.contains(ref)) {
+            log.warn("순환 참조 감지: {}", ref);
+            final ObjectNode circularMarker = objectMapper.createObjectNode();
+            circularMarker.put("_circular", true);
+            circularMarker.put("$ref", ref);
+            return circularMarker;
+        }
+
+        // 기존 resolveSchemaRef 활용하여 실제 schema 조회
+        final JsonNode resolvedOriginal = resolveSchemaRef(swaggerJson, ref);
+        if (resolvedOriginal == null) {
+            log.warn("$ref resolve 실패, 원본 노드 반환: {}", ref);
+            return node;
+        }
+
+        // 원본 보존을 위해 deepCopy
+        final JsonNode resolved = resolvedOriginal.deepCopy();
+
+        // DFS 경로에 추가 후 재귀 처리, 완료 후 제거
+        visited.add(ref);
+        resolveAllRefsRecursive(swaggerJson, resolved, visited);
+        visited.remove(ref);
+
+        return resolved;
     }
 
     /**

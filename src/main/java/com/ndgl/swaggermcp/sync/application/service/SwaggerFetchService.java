@@ -58,32 +58,4 @@ public class SwaggerFetchService {
         }
     }
 
-    /**
-     * Swagger JSON 유효성 검증
-     *
-     * @param swaggerJson Swagger JSON
-     * @return 유효성 여부
-     */
-    public boolean validateSwaggerJson(JsonNode swaggerJson) {
-        if (swaggerJson == null) {
-            log.warn("Swagger JSON is null");
-            return false;
-        }
-
-        // OpenAPI 버전 확인
-        String openapiVersion = swaggerJson.path("openapi").asText("");
-        if (openapiVersion.isBlank()) {
-            log.warn("OpenAPI version is missing");
-            return false;
-        }
-
-        // paths 필드 확인
-        if (!swaggerJson.has("paths")) {
-            log.warn("Swagger JSON does not have 'paths' field");
-            return false;
-        }
-
-        log.info("Swagger JSON validation passed. OpenAPI version: {}", openapiVersion);
-        return true;
-    }
 }
