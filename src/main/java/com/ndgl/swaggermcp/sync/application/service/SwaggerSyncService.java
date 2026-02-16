@@ -174,6 +174,13 @@ public class SwaggerSyncService {
         for (final ParsedResponseSchema response : responseSchemas) {
             try {
                 final Map<String, Object> schemaMap = convertJsonStringToMap(response.schemaJson());
+
+                // schema가 없는 응답(예: 204 No Content)은 저장하지 않음
+                if (schemaMap == null) {
+                    log.debug("Response Schema 건너뜀 (스키마 없음): 상태코드 {}", response.statusCode());
+                    continue;
+                }
+
                 final Map<String, Object> exampleMap = convertJsonStringToMap(response.exampleJson());
 
                 final ResponseSchema responseSchema = ResponseSchema.builder()
