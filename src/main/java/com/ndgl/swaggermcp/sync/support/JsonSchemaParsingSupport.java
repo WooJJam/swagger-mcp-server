@@ -161,8 +161,6 @@ public class JsonSchemaParsingSupport {
         // 최상위 노드 자체가 $ref인 경우 처리
         final JsonNode resolved = resolveIfRef(swaggerJson, copied, visited);
         if (resolved != copied) {
-            // 최상위가 $ref였고 resolve된 경우, resolve된 노드 내부도 재귀 처리
-            resolveAllRefsRecursive(swaggerJson, resolved, visited);
             return resolved;
         }
 
@@ -188,12 +186,9 @@ public class JsonSchemaParsingSupport {
         final JsonNode properties = objectNode.path("properties");
         if (properties.isObject()) {
             final ObjectNode propertiesNode = (ObjectNode) properties;
-            final Iterator<String> fieldNames = propertiesNode.fieldNames();
-            // fieldNames 목록을 먼저 수집 (ConcurrentModificationException 방지)
             final var fieldNameList = new java.util.ArrayList<String>();
-            while (fieldNames.hasNext()) {
-                fieldNameList.add(fieldNames.next());
-            }
+            propertiesNode.fieldNames().forEachRemaining(fieldNameList::add);
+
             for (final String fieldName : fieldNameList) {
                 final JsonNode fieldSchema = propertiesNode.get(fieldName);
                 final JsonNode resolvedField = resolveIfRef(swaggerJson, fieldSchema, visited);
@@ -205,14 +200,7 @@ public class JsonSchemaParsingSupport {
         }
 
         // 2. items (array 타입) 내부 $ref 처리
-        final JsonNode items = objectNode.path("items");
-        if (items.isObject()) {
-            final JsonNode resolvedItems = resolveIfRef(swaggerJson, items, visited);
-            if (resolvedItems != items) {
-                objectNode.set("items", resolvedItems);
-            }
-            resolveAllRefsRecursive(swaggerJson, resolvedItems, visited);
-        }
+        resolveChildRef(swaggerJson, objectNode, "items", visited);
 
         // 3. allOf, oneOf, anyOf 배열 내부 $ref 처리
         resolveRefsInCompositionArray(swaggerJson, objectNode, "allOf", visited);
@@ -220,23 +208,11 @@ public class JsonSchemaParsingSupport {
         resolveRefsInCompositionArray(swaggerJson, objectNode, "anyOf", visited);
 
         // 4. additionalProperties 내부 $ref 처리
-        final JsonNode additionalProperties = objectNode.path("additionalProperties");
-        if (additionalProperties.isObject()) {
-            final JsonNode resolvedAdditional = resolveIfRef(swaggerJson, additionalProperties, visited);
-            if (resolvedAdditional != additionalProperties) {
-                objectNode.set("additionalProperties", resolvedAdditional);
-            }
-            resolveAllRefsRecursive(swaggerJson, resolvedAdditional, visited);
-        }
+        resolveChildRef(swaggerJson, objectNode, "additionalProperties", visited);
     }
 
     /**
      * allOf/oneOf/anyOf 배열의 각 요소에 대해 $ref resolve 수행
-     *
-     * @param swaggerJson 전체 Swagger JSON
-     * @param parentNode 배열을 포함하는 부모 노드
-     * @param compositionKey 배열 키 (allOf, oneOf, anyOf)
-     * @param visited 순환 참조 감지를 위한 DFS 경로 추적 Set
      */
     private void resolveRefsInCompositionArray(final JsonNode swaggerJson, final ObjectNode parentNode,
                                                 final String compositionKey, final Set<String> visited) {
@@ -253,6 +229,21 @@ public class JsonSchemaParsingSupport {
                 arrayNode.set(i, resolvedElement);
             }
             resolveAllRefsRecursive(swaggerJson, resolvedElement, visited);
+        }
+    }
+
+    /**
+     * 부모 노드의 특정 자식 키에 대해 $ref resolve 수행
+     */
+    private void resolveChildRef(final JsonNode swaggerJson, final ObjectNode parentNode,
+                                  final String childKey, final Set<String> visited) {
+        final JsonNode child = parentNode.path(childKey);
+        if (child.isObject()) {
+            final JsonNode resolved = resolveIfRef(swaggerJson, child, visited);
+            if (resolved != child) {
+                parentNode.set(childKey, resolved);
+            }
+            resolveAllRefsRecursive(swaggerJson, resolved, visited);
         }
     }
 
@@ -281,14 +272,12 @@ public class JsonSchemaParsingSupport {
             return circularMarker;
         }
 
-        // 기존 resolveSchemaRef 활용하여 실제 schema 조회
         final JsonNode resolvedOriginal = resolveSchemaRef(swaggerJson, ref);
         if (resolvedOriginal == null) {
             log.warn("$ref resolve 실패, 원본 노드 반환: {}", ref);
             return node;
         }
 
-        // 원본 보존을 위해 deepCopy
         final JsonNode resolved = resolvedOriginal.deepCopy();
 
         // DFS 경로에 추가 후 재귀 처리, 완료 후 제거
