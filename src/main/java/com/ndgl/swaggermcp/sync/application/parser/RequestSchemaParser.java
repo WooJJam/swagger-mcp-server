@@ -39,19 +39,11 @@ public class RequestSchemaParser {
         final String schemaRef = schema.path("$ref").asText("");
         final String dtoName = parsingSupport.extractDtoNameFromRef(schemaRef);
 
-        // $ref를 resolve하여 실제 schema 가져오기
-        final JsonNode resolvedSchema = schemaRef.isEmpty()
-                ? schema
-                : parsingSupport.resolveSchemaRef(swaggerJson, schemaRef);
-
-        // 중첩 $ref를 재귀적으로 resolve
-        final JsonNode fullyResolvedSchema = parsingSupport.resolveAllRefs(
-                swaggerJson,
-                resolvedSchema != null ? resolvedSchema : schema
-        );
+        // 모든 $ref를 재귀적으로 resolve
+        final JsonNode resolvedSchema = parsingSupport.resolveAllRefs(swaggerJson, schema);
 
         // required 정보를 각 필드에 포함시킨 enriched schema 생성
-        final JsonNode enrichedSchema = parsingSupport.enrichSchemaWithRequired(fullyResolvedSchema);
+        final JsonNode enrichedSchema = parsingSupport.enrichSchemaWithRequired(resolvedSchema);
 
         final JsonSchemaParsingSupport.ExampleData exampleData = parsingSupport.extractExample(jsonContent, resolvedSchema);
         final String exampleJson = parsingSupport.convertToJsonString(exampleData.value());

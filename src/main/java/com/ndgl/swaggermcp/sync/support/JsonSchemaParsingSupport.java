@@ -116,7 +116,7 @@ public class JsonSchemaParsingSupport {
      * @param schemaRef $ref 값 (예: #/components/schemas/CreateUserTravelRequest)
      * @return 실제 schema 또는 null
      */
-    public JsonNode resolveSchemaRef(final JsonNode swaggerJson, final String schemaRef) {
+    private JsonNode resolveSchemaRef(final JsonNode swaggerJson, final String schemaRef) {
         if (schemaRef == null || schemaRef.isEmpty() || !schemaRef.startsWith("#/")) {
             return null;
         }
