@@ -202,10 +202,8 @@ public class JsonSchemaParsingSupport {
         // 2. items (array 타입) 내부 $ref 처리
         resolveChildRef(swaggerJson, objectNode, "items", visited);
 
-        // 3. allOf, oneOf, anyOf 배열 내부 $ref 처리
+        // 3. allOf 배열 내부 $ref 처리
         resolveRefsInCompositionArray(swaggerJson, objectNode, "allOf", visited);
-        resolveRefsInCompositionArray(swaggerJson, objectNode, "oneOf", visited);
-        resolveRefsInCompositionArray(swaggerJson, objectNode, "anyOf", visited);
 
         // 4. additionalProperties 내부 $ref 처리
         resolveChildRef(swaggerJson, objectNode, "additionalProperties", visited);
