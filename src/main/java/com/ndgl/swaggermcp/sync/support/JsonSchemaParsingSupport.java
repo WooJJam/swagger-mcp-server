@@ -299,14 +299,25 @@ public class JsonSchemaParsingSupport {
 
         // schema를 복사하여 수정 (원본 보존)
         final var enrichedSchema = schema.deepCopy();
+        enrichSchemaWithRequiredRecursive(enrichedSchema);
+        return enrichedSchema;
+    }
 
-        final JsonNode properties = enrichedSchema.path("properties");
+    /**
+     * schema 내부의 모든 깊이에서 required 배열을 각 필드에 인라인
+     */
+    private void enrichSchemaWithRequiredRecursive(final JsonNode schema) {
+        if (schema == null || schema.isMissingNode() || !schema.isObject()) {
+            return;
+        }
+
+        final JsonNode properties = schema.path("properties");
         if (properties.isMissingNode() || !properties.isObject()) {
-            return enrichedSchema;
+            return;
         }
 
         // required 배열 추출
-        final JsonNode requiredArray = enrichedSchema.path("required");
+        final JsonNode requiredArray = schema.path("required");
         final var requiredFields = new HashSet<String>();
         if (requiredArray.isArray()) {
             requiredArray.forEach(field -> requiredFields.add(field.asText()));
@@ -315,15 +326,23 @@ public class JsonSchemaParsingSupport {
         // properties의 각 필드에 required 정보 추가
         final ObjectNode propertiesObject = (ObjectNode) properties;
         for (final var entry : propertiesObject.properties()) {
-            String fieldName = entry.getKey();
+            final String fieldName = entry.getKey();
             final JsonNode fieldSchema = entry.getValue();
 
             if (fieldSchema instanceof ObjectNode objectNode) {
+                // 중첩 object 재귀 처리 (required 배열을 읽기 전에 boolean으로 덮어쓰면 안 됨)
+                enrichSchemaWithRequiredRecursive(objectNode);
+
+                // array의 items 재귀 처리
+                final JsonNode items = objectNode.path("items");
+                if (items.isObject()) {
+                    enrichSchemaWithRequiredRecursive(items);
+                }
+
+                // 재귀 처리 후 현재 필드의 required를 boolean으로 설정
                 objectNode.put("required", requiredFields.contains(fieldName));
             }
         }
-
-        return enrichedSchema;
     }
 
     /**

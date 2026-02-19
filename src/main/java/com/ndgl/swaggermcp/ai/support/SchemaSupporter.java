@@ -24,6 +24,8 @@ public class SchemaSupporter {
 
     /**
      * Schema JSON을 AI 친화적 포맷으로 변환
+     * DB에 저장된 스키마는 enrichSchemaWithRequired()를 통해
+     * 모든 깊이의 필드에 required 플래그가 이미 인라인된 상태다.
      *
      * @param schemaJson Schema JSON (Map 또는 String)
      * @param exampleJson Example JSON (Map 또는 null)
@@ -35,31 +37,16 @@ public class SchemaSupporter {
         }
 
         try {
-            // 1. Schema를 Map으로 변환
             final Map<String, Object> schemaMap = convertToMap(schemaJson);
-
-            // 2. Example을 Map으로 변환
             final Map<String, Object> exampleMap = exampleJson != null ? convertToMap(exampleJson) : Collections.emptyMap();
-
-            // 3. Properties 추출
             final Map<String, Object> properties = extractProperties(schemaMap);
 
-            // 4. Required 필드 추출
-            final List<String> required = extractRequired(schemaMap);
-
-            // 5. 각 필드를 FieldInfo로 변환
             final Map<String, FieldInfo> result = new LinkedHashMap<>();
             for (final Map.Entry<String, Object> entry : properties.entrySet()) {
                 final String fieldName = entry.getKey();
                 final Map<String, Object> fieldSchema = convertToMap(entry.getValue());
 
-                final FieldInfo fieldInfo = createFieldInfo(
-                    fieldSchema,
-                    required.contains(fieldName),
-                    exampleMap.get(fieldName)
-                );
-
-                result.put(fieldName, fieldInfo);
+                result.put(fieldName, createFieldInfo(fieldSchema, exampleMap.get(fieldName)));
             }
 
             return result;
@@ -90,6 +77,52 @@ public class SchemaSupporter {
     }
 
     /**
+     * FieldInfo 생성 (중첩 object/array 재귀 처리)
+     * required 값은 enrichSchemaWithRequired()에서 이미 각 필드에 인라인되어 있으므로
+     * fieldSchema에서 직접 읽는다.
+     */
+    private FieldInfo createFieldInfo(final Map<String, Object> fieldSchema, final Object example) {
+        final String type = getStringValue(fieldSchema, "type");
+        final String format = getStringValue(fieldSchema, "format");
+        final String description = getStringValue(fieldSchema, "description");
+        final boolean required = Boolean.TRUE.equals(fieldSchema.get("required"));
+        final Object finalExample = example != null ? example : fieldSchema.get("example");
+
+        // 중첩 object 타입 처리: 내부 properties 재귀 변환
+        Map<String, FieldInfo> nestedProperties = null;
+        if ("object".equals(type) && fieldSchema.containsKey("properties")) {
+            nestedProperties = formatNestedProperties(fieldSchema);
+        }
+
+        // 배열 타입 처리: items 내부 구조 재귀 변환
+        FieldInfo itemsFieldInfo = null;
+        if ("array".equals(type) && fieldSchema.containsKey("items")) {
+            final Map<String, Object> itemsSchema = convertToMap(fieldSchema.get("items"));
+            itemsFieldInfo = createFieldInfo(itemsSchema, null);
+        }
+
+        return new FieldInfo(type, format, required, description, finalExample, nestedProperties, itemsFieldInfo);
+    }
+
+    /**
+     * 중첩 object의 properties를 재귀적으로 FieldInfo Map으로 변환
+     */
+    private Map<String, FieldInfo> formatNestedProperties(final Map<String, Object> schemaMap) {
+        final Map<String, Object> properties = extractProperties(schemaMap);
+        if (properties.isEmpty()) {
+            return null;
+        }
+
+        final Map<String, FieldInfo> result = new LinkedHashMap<>();
+        for (final Map.Entry<String, Object> entry : properties.entrySet()) {
+            final Map<String, Object> fieldSchema = convertToMap(entry.getValue());
+            result.put(entry.getKey(), createFieldInfo(fieldSchema, null));
+        }
+
+        return result;
+    }
+
+    /**
      * Object를 Map으로 변환
      */
     private Map<String, Object> convertToMap(final Object obj) {
@@ -110,7 +143,6 @@ public class SchemaSupporter {
             }
         }
 
-        // 기타 타입은 ObjectMapper로 변환 시도
         try {
             final String json = objectMapper.writeValueAsString(obj);
             return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
@@ -129,76 +161,6 @@ public class SchemaSupporter {
             return (Map<String, Object>) properties;
         }
         return Collections.emptyMap();
-    }
-
-    /**
-     * Schema에서 required 필드 리스트 추출
-     */
-    private List<String> extractRequired(final Map<String, Object> schemaMap) {
-        final Object required = schemaMap.get("required");
-        if (required instanceof List) {
-            return ((List<?>) required).stream()
-                .map(Object::toString)
-                .toList();
-        }
-        return Collections.emptyList();
-    }
-
-    /**
-     * FieldInfo 생성 (중첩 object/array 재귀 처리)
-     */
-    private FieldInfo createFieldInfo(
-        final Map<String, Object> fieldSchema,
-        final boolean required,
-        final Object example
-    ) {
-        final String type = getStringValue(fieldSchema, "type");
-        final String format = getStringValue(fieldSchema, "format");
-        final String description = getStringValue(fieldSchema, "description");
-
-        // example이 fieldSchema 내부에 있을 수도 있음
-        final Object finalExample = example != null ? example : fieldSchema.get("example");
-
-        log.debug("createFieldInfo 호출 - type: {}, keys: {}", type, fieldSchema.keySet());
-
-        // 중첩 object 타입 처리: 내부 properties 재귀 변환
-        Map<String, FieldInfo> nestedProperties = null;
-        if ("object".equals(type) && fieldSchema.containsKey("properties")) {
-            log.debug("중첩 object 처리 시작 - properties keys: {}", ((Map<?, ?>) fieldSchema.get("properties")).keySet());
-            nestedProperties = formatNestedProperties(fieldSchema);
-        }
-
-        // 배열 타입 처리: items 내부 구조 재귀 변환
-        FieldInfo itemsFieldInfo = null;
-        if ("array".equals(type) && fieldSchema.containsKey("items")) {
-            final Map<String, Object> itemsSchema = convertToMap(fieldSchema.get("items"));
-            log.debug("배열 items 처리 시작 - items keys: {}", itemsSchema.keySet());
-            itemsFieldInfo = createFieldInfo(itemsSchema, false, null);
-        }
-
-        return new FieldInfo(type, format, required, description, finalExample, nestedProperties, itemsFieldInfo);
-    }
-
-    /**
-     * 중첩 object의 properties를 재귀적으로 FieldInfo Map으로 변환
-     */
-    private Map<String, FieldInfo> formatNestedProperties(final Map<String, Object> schemaMap) {
-        final Map<String, Object> properties = extractProperties(schemaMap);
-        if (properties.isEmpty()) {
-            return null;
-        }
-
-        final List<String> required = extractRequired(schemaMap);
-        final Map<String, FieldInfo> result = new LinkedHashMap<>();
-
-        for (final Map.Entry<String, Object> entry : properties.entrySet()) {
-            final String fieldName = entry.getKey();
-            final Map<String, Object> fieldSchema = convertToMap(entry.getValue());
-            final FieldInfo fieldInfo = createFieldInfo(fieldSchema, required.contains(fieldName), null);
-            result.put(fieldName, fieldInfo);
-        }
-
-        return result;
     }
 
     /**
