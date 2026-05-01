@@ -4,6 +4,15 @@ Backend API의 Swagger 문서를 MCP 서버로 제공하여, 클라이언트 개
 
 기존에 Swagger UI를 직접 탐색하며 엔드포인트, 요청/응답 구조를 확인하던 과정을 LLM 기반 조회로 대체해 단축합니다.
 
+[Swagger MCP Server 만들기 1편 - LLM 기반 API 탐색 자동화 설계](https://woojjam.tistory.com/18)
+
+[Swagger MCP Server 만들기 2편 - Swagger API 파싱](https://woojjam.tistory.com/19)
+
+[Swagger MCP Server 만들기 3편 - DB 저장 설계와 트러블 슈팅](https://woojjam.tistory.com/20)
+
+[Swagger MCP Server 만들기 4편 - Spring AI로 MCP 서버를 구축하고, Claude Code에 연동하기](https://woojjam.tistory.com/21)
+
+
 ## 🎯 핵심 시나리오
 
 ```
