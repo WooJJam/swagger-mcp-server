@@ -24,7 +24,7 @@ Claude가 자동으로:
 3. 즉시 Kotlin/Swift DTO 코드 생성 + 네트워크 호출 코드 작성
 ```
 
-## Usage
+## Usage
 
 ### 사전 요구사항
 - Java 21+
@@ -110,7 +110,6 @@ claude mcp add --transport http swagger-mcp http://{SERVER_IP}:{SERVER_PORT}/mcp
 - 중첩 객체, 배열 타입, Required/Optional 필드 명확하게 구분
 - Example 값 제공으로 즉시 코드 생성 가능
 
----
 
 ## 🏗️ 아키텍처
 
