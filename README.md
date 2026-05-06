@@ -13,7 +13,7 @@ Backend API의 Swagger 문서를 MCP 서버로 제공하여, 클라이언트 개
 [Swagger MCP Server 만들기 4편 - Spring AI로 MCP 서버를 구축하고, Claude Code에 연동하기](https://woojjam.tistory.com/21)
 
 
-## 🎯 핵심 시나리오
+## Key Point
 
 ```
 개발자: "로그인 API 찾아서 DTO 만들어줘"
@@ -24,7 +24,73 @@ Claude가 자동으로:
 3. 즉시 Kotlin/Swift DTO 코드 생성 + 네트워크 호출 코드 작성
 ```
 
-## ✨ 주요 기능
+## Usage
+
+### 사전 요구사항
+- Java 21+
+- Docker
+
+### 로컬 실행
+
+```bash
+# 1. .env 파일 생성
+cp .env.example .env  # 값 채워넣기
+
+# 2. 컨테이너 실행 (MySQL + App)
+docker compose up -d
+
+# 3. 또는 로컬 직접 실행
+./gradlew bootRun
+```
+
+### .env 설정값
+
+```
+MYSQL_ROOT_PASSWORD=
+MYSQL_DATABASE=
+MYSQL_USER=
+MYSQL_PASSWORD=
+MCP_ACCESS_TOKEN=
+APP_IMAGE=
+```
+
+[//]: # (## 📡 API 엔드포인트)
+
+[//]: # ()
+[//]: # (### Swagger 동기화)
+
+[//]: # (```http)
+
+[//]: # (POST /api/swagger/sync)
+
+[//]: # (Authorization: Bearer {MCP_ACCESS_TOKEN})
+
+[//]: # (Content-Type: application/json)
+
+[//]: # ()
+[//]: # ({)
+
+[//]: # (  "swaggerUrl": "https://backend-api.example.com/v3/api-docs")
+
+[//]: # (})
+
+[//]: # (```)
+
+### MCP 엔드포인트
+```http
+GET /mcp
+Authorization: Bearer {MCP_ACCESS_TOKEN}
+```
+
+## Claude Code 연결
+
+```bash
+claude mcp add --transport http swagger-mcp http://{SERVER_IP}:{SERVER_PORT}/mcp \
+  --header "Authorization: Bearer {MCP_ACCESS_TOKEN}" --scope project
+```
+
+
+## Features
 
 ### 1. Swagger 파싱 및 DB 저장
 - Backend 서버의 OpenAPI 3.0 JSON 다운로드 및 파싱
@@ -101,7 +167,7 @@ ApiSearchService
 | Utility | Lombok |
 | Deploy | Docker, GitHub Actions |
 
-## 📁 프로젝트 구조
+## Project Structure
 
 ```
 src/main/java/com/ndgl/swaggermcp/
@@ -165,7 +231,7 @@ src/main/java/com/ndgl/swaggermcp/
         └── ApiKeyAuthFilter       (MCP 인증)
 ```
 
-## 📋 MCP Tools 명세
+## MCP Tools Spec
 
 ### 1. `searchApiByKeyword(keyword: String)`
 **설명**: 키워드로 API 검색
@@ -221,68 +287,3 @@ searchApiByKeyword("로그인")
 
 ### 5. `getErrorFormats(apiId: Long)`
 **설명**: 상태 코드별 Error Response 조회 / **반환**: `Map<Integer, ErrorForAI>`
-
-## 🚀 빌드 및 실행
-
-### 사전 요구사항
-- Java 21+
-- Docker
-
-### 로컬 실행
-
-```bash
-# 1. .env 파일 생성
-cp .env.example .env  # 값 채워넣기
-
-# 2. 컨테이너 실행 (MySQL + App)
-docker compose up -d
-
-# 3. 또는 로컬 직접 실행
-./gradlew bootRun
-```
-
-### .env 설정값
-
-```
-MYSQL_ROOT_PASSWORD=
-MYSQL_DATABASE=
-MYSQL_USER=
-MYSQL_PASSWORD=
-MCP_ACCESS_TOKEN=
-APP_IMAGE=
-```
-
-[//]: # (## 📡 API 엔드포인트)
-
-[//]: # ()
-[//]: # (### Swagger 동기화)
-
-[//]: # (```http)
-
-[//]: # (POST /api/swagger/sync)
-
-[//]: # (Authorization: Bearer {MCP_ACCESS_TOKEN})
-
-[//]: # (Content-Type: application/json)
-
-[//]: # ()
-[//]: # ({)
-
-[//]: # (  "swaggerUrl": "https://backend-api.example.com/v3/api-docs")
-
-[//]: # (})
-
-[//]: # (```)
-
-### MCP 엔드포인트
-```http
-GET /mcp
-Authorization: Bearer {MCP_ACCESS_TOKEN}
-```
-
-## 🔗 Claude Code 연결
-
-```bash
-claude mcp add --transport http swagger-mcp http://{SERVER_IP}:{SERVER_PORT}/mcp \
-  --header "Authorization: Bearer {MCP_ACCESS_TOKEN}" --scope project
-```
